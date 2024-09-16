@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
+const publicPostsRoutes = require('./routes/publicPosts ');
 const commentRoutes = require('./routes/comments');
 const cors = require('cors');
 
@@ -21,5 +22,7 @@ mongoose.connect('mongodb://localhost:27017/blog-platform', {
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/public/posts', publicPostsRoutes);
+
 
 app.listen(8000, () => console.log('Server running on port 8000'));

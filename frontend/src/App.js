@@ -4,7 +4,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PrivatePortal from './pages/private';
 import PublicPortal from './pages/public';
-import Home from './pages/public/Home/Home';
+import Posts from './pages/public/Posts/Posts';
+import PostDetail from './pages/public/Posts/PostDetail';
 
 
 function App() {
@@ -31,7 +32,15 @@ function App() {
           path=""
           element={
             <React.Suspense fallback={<></>}>
-              <Home />
+              <Posts />
+            </React.Suspense>
+          }
+        />
+       <Route
+          path="post/:postId"
+          element={
+            <React.Suspense fallback={<></>}>
+              <PostDetail />
             </React.Suspense>
           }
         />

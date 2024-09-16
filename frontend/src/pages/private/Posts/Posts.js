@@ -1,46 +1,32 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import React, { useEffect, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import * as yup from "yup";
 import { api } from "../../../api/apiService";
 
 const schema = yup.object().shape({
-  username: yup
-    .string()
-    .required("Username is required")
-    .min(3, "Username must be at least 3 characters"),
-  email: yup
-    .string()
-    .required("Email is required")
-    .email("Email must be valid"),
-  password: yup.string().when("isEditMode", {
-    is: false,
-    then: yup
-      .string()
-      .required("Password is required")
-      .min(6, "Password must be at least 6 characters"),
-  }),
+  title: yup.string().required("Title is required"),
 });
 
-const Profile = () => {
+const Posts = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [user, setUser] = useState();
+  const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const userId = localStorage.getItem("userId");
+  const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
-    fetchUsers();
+    fetchPosts();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchPosts = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`users/${userId}`);
-      setValue("username", response.data.username);
-      setValue("email", response.data.email);
-      setUser(response.data);
+      const response = await api.get("posts");
+      console.log("res", response);
+      setPosts(response.data);
       setIsLoading(false);
     } catch (error) {
       console.log("err", error);
@@ -59,36 +45,72 @@ const Profile = () => {
     mode: "onChange",
   });
 
+  const openModal = () => {
+    reset();
+    setSelectedPost(null);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPost(null);
+  };
+
   const onSubmit = async (data) => {
     setIsLoading(true);
-    const updatedData = { ...data };
-
-    if (updatedData.password === "") {
-        delete updatedData.password;
-    }
     try {
-      await api.put(`users/${userId}`, updatedData);
-      toast.success("User updated successfully");
+      if (selectedPost) {
+        await api.put(`posts/${selectedPost._id}`, data);
+        setPosts(
+          posts.map((post) =>
+            post._id === selectedPost._id ? { ...post, ...data } : post
+          )
+        );
+        toast.success("Post updated successfully");
+      } else {
+        const response = await api.post("posts", data);
+        setPosts([response.data, ...posts]);
+        toast.success("Post added successfully");
+      }
+      reset();
+      closeModal();
     } catch (error) {
-      setIsLoading(false);
       console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleEditUser = (post) => {
+    setValue("title", post.title);
+    setValue("content", post.content);
+    setSelectedPost(post);
+    setIsModalOpen(true);
+  };
+
+  const handleDeletePost = async (postId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post?"
+    );
+    if (confirmDelete) {
+      setIsLoading(true);
+      try {
+        
+        await api.delete(`posts/${postId}`);
+        setPosts(posts.filter((post) => post._id !== postId));
+        toast.success("Post deleted successfully");
+      } catch (error) {
+        console.error("Error deleting post:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   return (
     <main id="main" className="main">
       <div className="pagetitle">
-        <h1>Profile</h1>
-        {/* <nav>
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item">
-              <Link to="/user/meetings">Home</Link>
-            </li>
-            <li className="breadcrumb-item">Users</li>
-          </ol>
-        </nav> */}
+        <h1>Posts</h1>
       </div>
       <section className="section">
         <div className="row">
@@ -97,85 +119,113 @@ const Profile = () => {
               <div className="card-body">
                 <div className="col-12">
                   <h5 className="card-title" />
-
-                  <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                    <div className="mb-3">
-                      <label htmlFor="username" className="form-label">
-                        Username
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${
-                          errors.username ? "is-invalid" : ""
-                        }`}
-                        id="username"
-                        placeholder="Enter username"
-                        {...register("username")}
-                      />
-                      {errors.username && (
-                        <div className="invalid-feedback">
-                          {errors.username.message}
-                        </div>
-                      )}
+                  <Button className="btn btn-primary" onClick={openModal}>
+                    Create Post
+                  </Button>
+                  <div className="container mt-4">
+                    <div className="row">
+                      <div className="col-md-8">
+                        <h2>Posts List</h2>
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th scope="col">#</th>
+                              <th scope="col">Title</th>
+                              <th scope="col">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {posts &&
+                              posts.map((post, index) => {
+                                return (
+                                  <tr key={post?.id}>
+                                    <td>{index + 1}</td>
+                                    <td>{post?.title}</td>
+                                    <td>
+                                      <span
+                                        title="Edit"
+                                        className="text-primary me-2"
+                                        style={{ cursor: "pointer" }}
+                                        onClick={() => handleEditUser(post)}
+                                      >
+                                        <i className="bi bi-pencil"></i>
+                                      </span>
+                                      <span
+                                        title="Delete"
+                                        className="text-danger me-2"
+                                        style={{ cursor: "pointer" }}
+                                        onClick={() =>
+                                          handleDeletePost(post._id)
+                                        }
+                                      >
+                                        <i className="bi bi-trash"></i>
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-
-                    <div className="mb-3">
-                      <label htmlFor="email" className="form-label">
-                        Email address
-                      </label>
-                      <input
-                        type="email"
-                        className={`form-control ${
-                          errors.email ? "is-invalid" : ""
-                        }`}
-                        id="email"
-                        placeholder="Enter email"
-                        disabled
-                        {...register("email")}
-                      />
-                      {errors.email && (
-                        <div className="invalid-feedback">
-                          {errors.email.message}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label htmlFor="password" className="form-label">
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        className={`form-control ${
-                          errors.password ? "is-invalid" : ""
-                        }`}
-                        id="password"
-                        placeholder="Enter password"
-                        autoComplete="off"
-                        {...register("password")}
-                      />
-                      {errors.password && (
-                        <div className="invalid-feedback">
-                          {errors.password.message}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      className="btn btn-primary"
-                      type="submit"
-                      disabled={isLoading}
-                    >
-                      Save changes
-                    </button>
-                  </form>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* React Bootstrap Modal */}
+      <Modal show={isModalOpen} onHide={closeModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {selectedPost ? "Edit Post" : "Add New Post"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="mb-3">
+              <label htmlFor="title" className="form-label">
+                Title
+              </label>
+              <input
+                type="text"
+                className={`form-control ${errors.title ? "is-invalid" : ""}`}
+                id="title"
+                placeholder="Enter title"
+                {...register("title")}
+              />
+              {errors.title && (
+                <div className="invalid-feedback">{errors.title.message}</div>
+              )}
+            </div>
+
+            <div className="mb-3">
+              <label htmlFor="content" className="form-label">
+                Desc
+              </label>
+              <input
+                type="text"
+                className={`form-control`}
+                id="content"
+                placeholder="Enter content"
+                {...register("content")}
+              />
+            </div>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={closeModal}>
+                Close
+              </Button>
+              <Button variant="primary" type="submit" disabled={isLoading}>
+                {selectedPost ? "Update" : "Save"}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Body>
+      </Modal>
     </main>
   );
 };
 
-export default Profile;
+export default Posts;

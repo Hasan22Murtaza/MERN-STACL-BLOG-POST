@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PrivatePortal from './pages/private';
 import PublicPortal from './pages/public';
+import Home from './pages/public/Home/Home';
 
 
 function App() {
@@ -24,6 +25,14 @@ function App() {
             <RequireAuth redirectTo="/">
               <PrivatePortal />
             </RequireAuth>
+          }
+        />
+        <Route
+          path=""
+          element={
+            <React.Suspense fallback={<></>}>
+              <Home />
+            </React.Suspense>
           }
         />
       </Routes>

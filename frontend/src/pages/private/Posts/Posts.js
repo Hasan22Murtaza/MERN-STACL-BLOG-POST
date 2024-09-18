@@ -5,11 +5,16 @@ import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import * as yup from "yup";
 import { api } from "../../../api/apiService";
-import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
+import {
+  EditorState,
+  convertToRaw,
+  convertFromRaw,
+  ContentState,
+} from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-import draftToHtml from 'draftjs-to-html'; // To convert raw Draft.js content to HTML
-import htmlToDraft from 'html-to-draftjs'; // To convert HTML back to Draft.js content
+import draftToHtml from "draftjs-to-html"; // To convert raw Draft.js content to HTML
+import htmlToDraft from "html-to-draftjs"; // To convert HTML back to Draft.js content
 
 // Validation schema
 const schema = yup.object().shape({
@@ -53,7 +58,7 @@ const Posts = () => {
   const openModal = () => {
     reset();
     setSelectedPost(null);
-    setEditorState(EditorState.createEmpty());  // Reset editor content
+    setEditorState(EditorState.createEmpty()); // Reset editor content
     setIsModalOpen(true);
   };
 
@@ -64,10 +69,12 @@ const Posts = () => {
 
   const onSubmit = async (data) => {
     setIsLoading(true);
-    const rawContentState = draftToHtml(convertToRaw(editorState.getCurrentContent()));
-    const postData = { 
-      ...data, 
-      content: rawContentState
+    const rawContentState = draftToHtml(
+      convertToRaw(editorState.getCurrentContent())
+    );
+    const postData = {
+      ...data,
+      content: rawContentState,
     };
     try {
       if (selectedPost) {
@@ -94,12 +101,15 @@ const Posts = () => {
 
   const handleEditUser = (post) => {
     setValue("title", post.title);
-    const contentBlock = htmlToDraft(post.content);
-    if (contentBlock) {
-      const contentState = convertFromRaw(JSON.parse(post.content));
-      const editorState = EditorState.createWithContent(contentState);
-      setEditorState(editorState);
-    }
+    setEditorState(
+      post.content
+        ? EditorState.createWithContent(
+            ContentState.createFromBlockArray(
+              htmlToDraft(post.content).contentBlocks
+            )
+          )
+        : EditorState?.createEmpty()
+    );
     setSelectedPost(post);
     setIsModalOpen(true);
   };
@@ -221,7 +231,7 @@ const Posts = () => {
                 toolbarClassName="toolbarClassName"
                 wrapperClassName="wrapperClassName"
                 editorClassName="editorClassName"
-                onEditorStateChange={setEditorState}  // Update editor content
+                onEditorStateChange={setEditorState} // Update editor content
               />
             </div>
             <Modal.Footer>

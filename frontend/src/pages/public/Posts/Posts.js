@@ -1,21 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../api/apiService";
-import moment from 'moment';
+import moment from "moment";
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState();
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [category]);
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("public/posts");
+      const response = await api.get(`public/posts/${category._id}`);
       setPosts(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.log("err", error);
+      setIsLoading(false);
+    }
+  };
+  const fetchCategories = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get("categories");
+      setCategories(response.data);
+      setCategory(response.data[0]);
       setIsLoading(false);
     } catch (error) {
       console.log("err", error);
@@ -25,7 +41,9 @@ const Home = () => {
 
   const truncateContent = (content, limit = 400) => {
     if (!content) return "";
-    return content.length > limit ? content.substring(0, limit) + "..." : content;
+    return content.length > limit
+      ? content.substring(0, limit) + "..."
+      : content;
   };
 
   // Separate featured post (first post) from the rest
@@ -62,7 +80,10 @@ const Home = () => {
                   <path d="M21 21l-5.2-5.2" />
                 </svg>
               </a>
-              <Link className="btn btn-sm btn-outline-secondary" to="/auth/login">
+              <Link
+                className="btn btn-sm btn-outline-secondary"
+                to="/auth/login"
+              >
                 Login
               </Link>
             </div>
@@ -70,42 +91,19 @@ const Home = () => {
         </header>
         <div className="nav-scroller py-1 mb-3 border-bottom">
           <nav className="nav nav-underline justify-content-between">
-            <a className="nav-item nav-link link-body-emphasis active" href="#">
-              World
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              U.S.
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Technology
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Design
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Culture
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Business
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Politics
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Opinion
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Science
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Health
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Style
-            </a>
-            <a className="nav-item nav-link link-body-emphasis" href="#">
-              Travel
-            </a>
+            {categories &&
+              categories.map((category, index) => {
+                return (
+                  <a
+                    key={index + 1}
+                    className="nav-item nav-link link-body-emphasis"
+                    href="javascript:void(0)"
+                    onClick={() => setCategory(category)}
+                  >
+                    {category?.title}
+                  </a>
+                );
+              })}
           </nav>
         </div>
       </div>
@@ -115,9 +113,17 @@ const Home = () => {
           <div className="p-4 p-md-5 mb-4 rounded text-body-emphasis bg-body-secondary">
             <div className="col-lg-6 px-0">
               <h1 className="display-4 fst-italic">{featuredPost.title}</h1>
-              <p className="lead my-3">{truncateContent(featuredPost.content, 400)}</p>
+              <p
+                className="lead my-3"
+                dangerouslySetInnerHTML={{
+                  __html: truncateContent(featuredPost.content, 400),
+                }}
+              />
               <p className="lead mb-0">
-                <Link to={`/post/${featuredPost._id}`} className="text-body-emphasis fw-bold">
+                <Link
+                  to={`/post/${featuredPost._id}`}
+                  className="text-body-emphasis fw-bold"
+                >
                   Continue reading...
                 </Link>
               </p>
@@ -127,7 +133,8 @@ const Home = () => {
         {/* Remaining Posts */}
         <div className="row mb-2">
           {remainingPosts.map((post, index) => {
-            const hasContent = post.content && post.content.trim().length >= 400;
+            const hasContent =
+              post.content && post.content.trim().length >= 400;
             const truncatedContent = truncateContent(post.content);
 
             return (
@@ -135,7 +142,9 @@ const Home = () => {
                 <div className="row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
                   <div className="col p-4 d-flex flex-column position-static">
                     <h3 className="mb-0">{post?.title}</h3>
-                    <div className="mb-1 text-body-secondary">{moment(post.createdAt).format('MMMM Do YYYY')}</div>
+                    <div className="mb-1 text-body-secondary">
+                      {moment(post.createdAt).format("MMMM Do YYYY")}
+                    </div>
                     <p
                       className="card-text mb-auto"
                       dangerouslySetInnerHTML={{

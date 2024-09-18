@@ -24,7 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/comments', commentRoutes);
-app.use('/api/public/posts', publicPostsRoutes);
+app.use('/api/public/', publicPostsRoutes);
 
 
 app.listen(8000, () => console.log('Server running on port 8000'));

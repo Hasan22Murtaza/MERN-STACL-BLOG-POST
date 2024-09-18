@@ -19,17 +19,20 @@ import htmlToDraft from "html-to-draftjs"; // To convert HTML back to Draft.js c
 // Validation schema
 const schema = yup.object().shape({
   title: yup.string().required("Title is required"),
+  category_id: yup.string().required("Category is required"),
 });
 
 const Posts = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editorState, setEditorState] = useState(EditorState.createEmpty()); // Editor state
 
   useEffect(() => {
     fetchPosts();
+    fetchCategories();
   }, []);
 
   const fetchPosts = async () => {
@@ -37,6 +40,18 @@ const Posts = () => {
     try {
       const response = await api.get("posts");
       setPosts(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.log("err", error);
+      setIsLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get("categories");
+      setCategories(response.data);
       setIsLoading(false);
     } catch (error) {
       console.log("err", error);
@@ -101,6 +116,7 @@ const Posts = () => {
 
   const handleEditUser = (post) => {
     setValue("title", post.title);
+    setValue("category_id", post.category_id); // Set category ID
     setEditorState(
       post.content
         ? EditorState.createWithContent(
@@ -108,7 +124,7 @@ const Posts = () => {
               htmlToDraft(post.content).contentBlocks
             )
           )
-        : EditorState?.createEmpty()
+        : EditorState.createEmpty()
     );
     setSelectedPost(post);
     setIsModalOpen(true);
@@ -156,6 +172,7 @@ const Posts = () => {
                             <tr>
                               <th scope="col">#</th>
                               <th scope="col">Title</th>
+                              <th scope="col">Category</th> {/* Added Category column */}
                               <th scope="col">Action</th>
                             </tr>
                           </thead>
@@ -165,6 +182,7 @@ const Posts = () => {
                                 <tr key={post?._id}>
                                   <td>{index + 1}</td>
                                   <td>{post?.title}</td>
+                                  <td>{categories.find(cat => cat._id === post.category_id)?.title || "N/A"}</td> {/* Display Category */}
                                   <td>
                                     <span
                                       title="Edit"
@@ -219,6 +237,27 @@ const Posts = () => {
               />
               {errors.title && (
                 <div className="invalid-feedback">{errors.title.message}</div>
+              )}
+            </div>
+
+            <div className="mb-3">
+              <label htmlFor="category_id" className="form-label">
+                Category
+              </label>
+              <select
+                id="category_id"
+                className={`form-select ${errors.category_id ? "is-invalid" : ""}`}
+                {...register("category_id")}
+              >
+                <option value="">Select category</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.title}
+                  </option>
+                ))}
+              </select>
+              {errors.category_id && (
+                <div className="invalid-feedback">{errors.category_id.message}</div>
               )}
             </div>
 

@@ -14,7 +14,7 @@ const PostDetail = () => {
   const fetchPost = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`public/posts/${postId}`);
+      const response = await api.get(`public/post/${postId}`);
       setPost(response.data);
       setIsLoading(false);
     } catch (error) {

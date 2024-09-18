@@ -1,7 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../../api/apiService";
+import moment from 'moment';
 
 const Home = () => {
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get("public/posts");
+      setPosts(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.log("err", error);
+      setIsLoading(false);
+    }
+  };
+
+  const truncateContent = (content, limit = 400) => {
+    if (!content) return "";
+    return content.length > limit ? content.substring(0, limit) + "..." : content;
+  };
+
+  // Separate featured post (first post) from the rest
+  const featuredPost = posts[0];
+  const remainingPosts = posts.slice(1);
+
   return (
     <>
       <div className="container">
@@ -80,108 +110,72 @@ const Home = () => {
         </div>
       </div>
       <main className="container">
-        <div className="p-4 p-md-5 mb-4 rounded text-body-emphasis bg-body-secondary">
-          <div className="col-lg-6 px-0">
-            <h1 className="display-4 fst-italic">
-              Title of a longer featured blog post
-            </h1>
-            <p className="lead my-3">
-              Multiple lines of text that form the lede, informing new readers
-              quickly and efficiently about what’s most interesting in this
-              post’s contents.
-            </p>
-            <p className="lead mb-0">
-              <a href="#" className="text-body-emphasis fw-bold">
-                Continue reading...
-              </a>
-            </p>
+        {/* Featured Post */}
+        {featuredPost && (
+          <div className="p-4 p-md-5 mb-4 rounded text-body-emphasis bg-body-secondary">
+            <div className="col-lg-6 px-0">
+              <h1 className="display-4 fst-italic">{featuredPost.title}</h1>
+              <p className="lead my-3">{truncateContent(featuredPost.content, 400)}</p>
+              <p className="lead mb-0">
+                <Link to={`/post/${featuredPost._id}`} className="text-body-emphasis fw-bold">
+                  Continue reading...
+                </Link>
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+        {/* Remaining Posts */}
         <div className="row mb-2">
-          <div className="col-md-6">
-            <div className="row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
-              <div className="col p-4 d-flex flex-column position-static">
-                <strong className="d-inline-block mb-2 text-primary-emphasis">
-                  World
-                </strong>
-                <h3 className="mb-0">Featured post</h3>
-                <div className="mb-1 text-body-secondary">Nov 12</div>
-                <p className="card-text mb-auto">
-                  This is a wider card with supporting text below as a natural
-                  lead-in to additional content.
-                </p>
-                <a
-                  href="#"
-                  className="icon-link gap-1 icon-link-hover stretched-link"
-                >
-                  Continue reading
-                  <svg className="bi">
-                    <use xlinkHref="#chevron-right" />
-                  </svg>
-                </a>
+          {remainingPosts.map((post, index) => {
+            const hasContent = post.content && post.content.trim().length >= 400;
+            const truncatedContent = truncateContent(post.content);
+
+            return (
+              <div className="col-md-6" key={index + 1}>
+                <div className="row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
+                  <div className="col p-4 d-flex flex-column position-static">
+                    <h3 className="mb-0">{post?.title}</h3>
+                    <div className="mb-1 text-body-secondary">{moment(post.createdAt).format('MMMM Do YYYY')}</div>
+                    <p
+                      className="card-text mb-auto"
+                      dangerouslySetInnerHTML={{
+                        __html: truncatedContent, // Render truncated content
+                      }}
+                    />
+                    {hasContent && (
+                      <Link
+                        to={`/post/${post._id}`}
+                        className="icon-link gap-1 icon-link-hover stretched-link"
+                      >
+                        Continue reading
+                        <svg className="bi">
+                          <use xlinkHref="#chevron-right" />
+                        </svg>
+                      </Link>
+                    )}
+                  </div>
+                  <div className="col-auto d-none d-lg-block">
+                    <svg
+                      className="bd-placeholder-img"
+                      width={200}
+                      height={250}
+                      xmlns="http://www.w3.org/2000/svg"
+                      role="img"
+                      aria-label="Placeholder: Thumbnail"
+                      preserveAspectRatio="xMidYMid slice"
+                      focusable="false"
+                    >
+                      <title>Placeholder</title>
+                      <rect width="100%" height="100%" fill="#55595c" />
+                      <text x="50%" y="50%" fill="#eceeef" dy=".3em">
+                        Thumbnail
+                      </text>
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="col-auto d-none d-lg-block">
-                <svg
-                  className="bd-placeholder-img"
-                  width={200}
-                  height={250}
-                  xmlns="http://www.w3.org/2000/svg"
-                  role="img"
-                  aria-label="Placeholder: Thumbnail"
-                  preserveAspectRatio="xMidYMid slice"
-                  focusable="false"
-                >
-                  <title>Placeholder</title>
-                  <rect width="100%" height="100%" fill="#55595c" />
-                  <text x="50%" y="50%" fill="#eceeef" dy=".3em">
-                    Thumbnail
-                  </text>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-6">
-            <div className="row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
-              <div className="col p-4 d-flex flex-column position-static">
-                <strong className="d-inline-block mb-2 text-success-emphasis">
-                  Design
-                </strong>
-                <h3 className="mb-0">Post title</h3>
-                <div className="mb-1 text-body-secondary">Nov 11</div>
-                <p className="mb-auto">
-                  This is a wider card with supporting text below as a natural
-                  lead-in to additional content.
-                </p>
-                <a
-                  href="#"
-                  className="icon-link gap-1 icon-link-hover stretched-link"
-                >
-                  Continue reading
-                  <svg className="bi">
-                    <use xlinkHref="#chevron-right" />
-                  </svg>
-                </a>
-              </div>
-              <div className="col-auto d-none d-lg-block">
-                <svg
-                  className="bd-placeholder-img"
-                  width={200}
-                  height={250}
-                  xmlns="http://www.w3.org/2000/svg"
-                  role="img"
-                  aria-label="Placeholder: Thumbnail"
-                  preserveAspectRatio="xMidYMid slice"
-                  focusable="false"
-                >
-                  <title>Placeholder</title>
-                  <rect width="100%" height="100%" fill="#55595c" />
-                  <text x="50%" y="50%" fill="#eceeef" dy=".3em">
-                    Thumbnail
-                  </text>
-                </svg>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </main>
       <footer className="py-5 text-center text-body-secondary bg-body-tertiary">

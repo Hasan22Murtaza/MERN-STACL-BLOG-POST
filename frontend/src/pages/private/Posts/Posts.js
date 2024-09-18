@@ -2,11 +2,16 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import React, { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import * as yup from "yup";
 import { api } from "../../../api/apiService";
+import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
+import { Editor } from "react-draft-wysiwyg";
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import draftToHtml from 'draftjs-to-html'; // To convert raw Draft.js content to HTML
+import htmlToDraft from 'html-to-draftjs'; // To convert HTML back to Draft.js content
 
+// Validation schema
 const schema = yup.object().shape({
   title: yup.string().required("Title is required"),
 });
@@ -16,6 +21,7 @@ const Posts = () => {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [editorState, setEditorState] = useState(EditorState.createEmpty()); // Editor state
 
   useEffect(() => {
     fetchPosts();
@@ -25,7 +31,6 @@ const Posts = () => {
     setIsLoading(true);
     try {
       const response = await api.get("posts");
-      console.log("res", response);
       setPosts(response.data);
       setIsLoading(false);
     } catch (error) {
@@ -48,6 +53,7 @@ const Posts = () => {
   const openModal = () => {
     reset();
     setSelectedPost(null);
+    setEditorState(EditorState.createEmpty());  // Reset editor content
     setIsModalOpen(true);
   };
 
@@ -58,17 +64,22 @@ const Posts = () => {
 
   const onSubmit = async (data) => {
     setIsLoading(true);
+    const rawContentState = draftToHtml(convertToRaw(editorState.getCurrentContent()));
+    const postData = { 
+      ...data, 
+      content: rawContentState
+    };
     try {
       if (selectedPost) {
-        await api.put(`posts/${selectedPost._id}`, data);
+        await api.put(`posts/${selectedPost._id}`, postData);
         setPosts(
           posts.map((post) =>
-            post._id === selectedPost._id ? { ...post, ...data } : post
+            post._id === selectedPost._id ? { ...post, ...postData } : post
           )
         );
         toast.success("Post updated successfully");
       } else {
-        const response = await api.post("posts", data);
+        const response = await api.post("posts", postData);
         setPosts([response.data, ...posts]);
         toast.success("Post added successfully");
       }
@@ -83,7 +94,12 @@ const Posts = () => {
 
   const handleEditUser = (post) => {
     setValue("title", post.title);
-    setValue("content", post.content);
+    const contentBlock = htmlToDraft(post.content);
+    if (contentBlock) {
+      const contentState = convertFromRaw(JSON.parse(post.content));
+      const editorState = EditorState.createWithContent(contentState);
+      setEditorState(editorState);
+    }
     setSelectedPost(post);
     setIsModalOpen(true);
   };
@@ -95,7 +111,6 @@ const Posts = () => {
     if (confirmDelete) {
       setIsLoading(true);
       try {
-        
         await api.delete(`posts/${postId}`);
         setPosts(posts.filter((post) => post._id !== postId));
         toast.success("Post deleted successfully");
@@ -136,34 +151,30 @@ const Posts = () => {
                           </thead>
                           <tbody>
                             {posts &&
-                              posts.map((post, index) => {
-                                return (
-                                  <tr key={post?.id}>
-                                    <td>{index + 1}</td>
-                                    <td>{post?.title}</td>
-                                    <td>
-                                      <span
-                                        title="Edit"
-                                        className="text-primary me-2"
-                                        style={{ cursor: "pointer" }}
-                                        onClick={() => handleEditUser(post)}
-                                      >
-                                        <i className="bi bi-pencil"></i>
-                                      </span>
-                                      <span
-                                        title="Delete"
-                                        className="text-danger me-2"
-                                        style={{ cursor: "pointer" }}
-                                        onClick={() =>
-                                          handleDeletePost(post._id)
-                                        }
-                                      >
-                                        <i className="bi bi-trash"></i>
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
+                              posts.map((post, index) => (
+                                <tr key={post?._id}>
+                                  <td>{index + 1}</td>
+                                  <td>{post?.title}</td>
+                                  <td>
+                                    <span
+                                      title="Edit"
+                                      className="text-primary me-2"
+                                      style={{ cursor: "pointer" }}
+                                      onClick={() => handleEditUser(post)}
+                                    >
+                                      <i className="bi bi-pencil"></i>
+                                    </span>
+                                    <span
+                                      title="Delete"
+                                      className="text-danger me-2"
+                                      style={{ cursor: "pointer" }}
+                                      onClick={() => handleDeletePost(post._id)}
+                                    >
+                                      <i className="bi bi-trash"></i>
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
                           </tbody>
                         </table>
                       </div>
@@ -203,14 +214,14 @@ const Posts = () => {
 
             <div className="mb-3">
               <label htmlFor="content" className="form-label">
-                Desc
+                Content
               </label>
-              <input
-                type="text"
-                className={`form-control`}
-                id="content"
-                placeholder="Enter content"
-                {...register("content")}
+              <Editor
+                editorState={editorState}
+                toolbarClassName="toolbarClassName"
+                wrapperClassName="wrapperClassName"
+                editorClassName="editorClassName"
+                onEditorStateChange={setEditorState}  // Update editor content
               />
             </div>
             <Modal.Footer>
